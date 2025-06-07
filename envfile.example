@@ -1,0 +1,12 @@
+systemName=MCP Server
+PORT=80
+#stdio
+transport=sse
+addr=localhost
+
+DocumentRoot=/app/www/html
+TemplateRoot=/app/www/template/
+RootPath=/mcpsrv
+DataRoot=/vagrant/go/src/github.com/asccclass/mcpserver/data/
+
+ToDoAPIEndpoint=https://www.justdrink.com.tw/apigateway/
