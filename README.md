@@ -15,6 +15,26 @@ MCPsrv is a lightweight MCP (Management Control Protocol) server implementation 
 
 ## Installation
 
+### 目錄架構
+```
+.gitignore: Git 忽略檔案規則。
+Dockerfile: 定義如何構建 Docker 映像檔。
+README.md: 專案的說明文件。
+auth.go: 與認證相關的功能。
+clean.sh: 清理腳本。
+envfile.example: 環境變數設定範例檔案。
+go.mod: Go modules 設定。
+go.sum: Go modules 的相依性摘要。
+libs/: 自定義函式庫的目錄。
+makefile: 編譯和自動化相關的指令。
+router.go: 負責路由的功能。
+server.go: 伺服器主程式。
+tls.go: 與 TLS 加密協定相關的功能。
+token.go: 與 Token 處理相關的功能。
+tools/: 工具程式的目錄。
+www/: 靜態網頁檔案的目錄。
+```
+
 ### Prerequisites
 
 - Go 1.16 or higher
