@@ -31,6 +31,7 @@ run: docker
 	-v /etc/pki/ca-trust/extracted/pem:/etc/pki/ca-trust/extracted/pem \
 	-v /etc/pki/ca-trust/extracted/openssl:/etc/pki/ca-trust/extracted/openssl \
 	-v ${CURDIR}www:/app/www  \
+	-v ${CURDIR}data:/app/data  \
 	-v ${CURDIR}envfile:/app/envfile  \
 	-p ${PORT}:80 \
 	--env-file ${CURDIR}envfile \

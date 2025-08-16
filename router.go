@@ -7,6 +7,7 @@ import(
    "github.com/asccclass/serverstatus"
    "github.com/asccclass/sherryserver"
    "github.com/asccclass/mcpsrv/tools/todo"
+   "github.com/asccclass/mcpsrv/tools/weather"
    "github.com/asccclass/mcpsrv/libs/mcpserver"
 )
 
@@ -22,12 +23,20 @@ func NewRouter(srv *SherryServer.Server, documentRoot string)(*http.ServeMux) {
    mcpserver := SryMCPServer.NewMCPServer()
    mcpserver.AddRouter(router)
 
-   // 註冊工具
+   // 註冊 TODO 工具
    todoSrv, err := todoMCPServer.NewTodoMCPServer(os.Getenv("ToDoAPIEndpoint"))
    if err == nil {
       todoSrv.AddTools(mcpserver)
    } else {
       fmt.Println("service todo is not initial:", err.Error())
+   }
+
+   // 註冊天候
+   wSrv, err := weatherMCPServer.NewWeatherMCPServer(os.Getenv("weatherAPIEndpoint"))
+   if err == nil {
+      wSrv.AddTools(mcpserver)
+   } else {
+      fmt.Println("service weather is not initial:", err.Error())
    }
 
    // health check
