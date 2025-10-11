@@ -14,7 +14,7 @@ type Todo struct {
    CreateDate time.Time `json:"createdate"`
    Context    string    `json:"context"`
    User       string    `json:"user"`
-   DueTime    string    `json:"duetime"`
+   DueTime    string    `json:"duetime"`   // ,omitempty
    IsFinish   string    `json:"isFinish"`
 }
 
@@ -31,18 +31,23 @@ func(s *TodoMCPServer) getAllTodos(args map[string]interface{}) (*mcp.CallToolRe
       return mcp.NewToolResultError(fmt.Sprintf("Failed to parse response: %v", err)), nil
    }
    // 格式化輸出
-   result := "# 現有待辦事項如下:\n"
-   for _, todo := range todos {
-      status := "❌ 未完成"
-      if todo.IsFinish == "1" {
-         status = "處理中"
-      } else if todo.IsFinish == "2" {
-         status = "✅ 完成"
-      } else if todo.IsFinish == "3" {
-         status = "擱置"
+   result := ""
+   if len(todos) == 0 {
+      result = "目前清單中沒有任何待辦事項"
+   } else {
+      result = "# 現有待辦事項如下:\n"
+      for _, todo := range todos {
+         status := "❌ 未完成"
+         if todo.IsFinish == "1" {
+            status = "處理中"
+         } else if todo.IsFinish == "2" {
+            status = "✅ 完成"
+         } else if todo.IsFinish == "3" {
+            status = "擱置"
+         }
+         result += fmt.Sprintf("\n## ID: %d\n* 負責者: %s\n* 事件狀態: %s\n* 到期時間: %s", todo.ID, todo.User, status, todo.DueTime)
+         result += fmt.Sprintf("\n* 內容: %s\n* 建立時間:%s）", todo.Context, todo.CreateDate.Format("2006-01-02 15:04:05"))
       }
-      result += fmt.Sprintf("## ID: %d\n* 負責者: %s\n* 事件狀態: %s\n* 到期時間: %s\n", todo.ID, todo.User, status, todo.DueTime)
-      result += fmt.Sprintf("* 內容: %s（建立時間: %s）", todo.Context, todo.CreateDate.Format("2006-01-02 15:04:05"))
    }
    return mcp.NewToolResultText(result), nil
 }
@@ -128,7 +133,7 @@ func(s *TodoMCPServer) createTodo(args map[string]interface{}) (*mcp.CallToolRes
 
 // updateTodo 修改待辦事項
 func(s *TodoMCPServer) updateTodo(args map[string]interface{}) (*mcp.CallToolResult, error) {
-   idArg, ok := args["id"].(string)
+   idArg, ok := args["id"].(any)
    if !ok {
       return mcp.NewToolResultError("Missing required parameter: id"), nil
    }
@@ -153,8 +158,7 @@ func(s *TodoMCPServer) updateTodo(args map[string]interface{}) (*mcp.CallToolRes
    if isFinishArg, ok := args["isFinish"]; ok {
       todo.IsFinish = fmt.Sprintf("%v", isFinishArg)
    }
-   url := fmt.Sprintf("%s/todo/%d", s.API, id)
-   fmt.Println(url, todo.User)
+   url := fmt.Sprintf("%stodo/%d", s.API, id)
    resp, err := s.makeAPIRequest("PUT", url, todo)
    if err != nil {
       return mcp.NewToolResultError(fmt.Sprintf("Failed to update todo: %v", err)), nil
@@ -163,26 +167,13 @@ func(s *TodoMCPServer) updateTodo(args map[string]interface{}) (*mcp.CallToolRes
    if err := json.Unmarshal(resp, &updatedTodo); err != nil {
       return mcp.NewToolResultError(fmt.Sprintf("Failed to parse response: %v", err)), nil
    }
-   status := "❌ 未完成"
-   if todo.IsFinish == "1" {
-      status = "處理中"
-   } else if todo.IsFinish == "2" {
-      status = "✅ 完成"
-   } else if todo.IsFinish == "3" {
-      status = "擱置"
-   }
-   result := fmt.Sprintf("✅ 待辦事項更新成功!\n\n")
-   result += fmt.Sprintf("ID: %d\n", updatedTodo.ID)
-   result += fmt.Sprintf("內容: %s\n", updatedTodo.Context)
-   result += fmt.Sprintf("使用者: %s\n", updatedTodo.User)
-   result += fmt.Sprintf("到期時間: %s\n", updatedTodo.DueTime)
-   result += fmt.Sprintf("狀態: %s\n", status)
+   result := fmt.Sprintf("✅ ID:%v 待辦事項更新成功!\n\n", idArg)
    return mcp.NewToolResultText(result), nil
 }
 
 // deleteTodo 刪除待辦事項
 func(s *TodoMCPServer) deleteTodo(args map[string]interface{}) (*mcp.CallToolResult, error) {
-   idArg, ok := args["id"].(string)
+   idArg, ok := args["id"].(any)
    if !ok {
       return mcp.NewToolResultError("Missing required parameter: id"), nil
    }

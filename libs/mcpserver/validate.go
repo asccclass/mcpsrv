@@ -2,6 +2,7 @@ package SryMCPServer
 
 import (
    "fmt"
+   "strconv"
 )
 
 // 驗證參數類型
@@ -27,8 +28,12 @@ func(s *MCPServer) validateArgumentType(name string, value interface{}, schema P
          }
       case "number":
          switch value.(type) {
-            case float64, int, int64, int32:
-            // 有效的數字類型
+            case string:
+               _, err := strconv.Atoi(value.(string))
+	       return err
+	       break
+            case float64, int, int64, int32: // 有效的數字類型
+	       break
             default:
                return fmt.Errorf("parameter %s must be a number", name)
          }
@@ -53,7 +58,7 @@ func(s *MCPServer) validateToolArguments(tool Tool, args map[string]interface{})
    // 檢查必需參數
    for _, param := range tool.InputSchema.Required {
       if _, exists := args[param]; !exists {
-         return fmt.Errorf("missing required parameter: %s", param)
+         return fmt.Errorf("missing required parameter: %v", param)
       }
    }
    // 驗證參數類型

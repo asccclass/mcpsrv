@@ -35,11 +35,12 @@ type SSEClient struct {
 
 // MCP Server 結構
 type MCPServer struct {
-   clients    map[string]*SSEClient // username -> SSEClient
-   clientsMu  sync.RWMutex
-   requests   map[string]chan MCPMessage // 請求ID -> 響應通道
-   requestsMu sync.RWMutex
-   ToolKits   map[string]Tool
+   clients	map[string]*SSEClient // username -> SSEClient
+   clientsMu	sync.RWMutex
+   requests	map[string]chan MCPMessage // 請求ID -> 響應通道
+   requestsMu	sync.RWMutex
+   ToolKits	map[string]Tool			// MCP Server 使用
+   Tools	map[string]*MCPHost		// MCP Host/Client 使用
 }
 
 // 發送 SSE 資訊
@@ -143,7 +144,7 @@ func(s *MCPServer) sseHandler(w http.ResponseWriter, r *http.Request) {
             return
          case msg := <-client.MessageChan:
             if err := s.sendSSEMessage(client, msg); err != nil {
-               fmt.Printf("Failed to send message to %s: %v", claims.Username, err)
+               fmt.Printf("Failed to send message to %s: %v\n", claims.Username, err)
                return
             }
          case <-time.After(30 * time.Second): // 發送心跳
@@ -189,11 +190,10 @@ func(s *MCPServer) requestHandler(w http.ResponseWriter, r *http.Request) {
    // 解析請求
    var msg MCPMessage
    if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
-      fmt.Println("Invalid request body")
+      fmt.Println("mcpserver: Invalid request body")
       http.Error(w, "Invalid request body", http.StatusBadRequest)
       return
    }
-   fmt.Printf("Received request from %s: %+v", claims.Username, msg)
    // 處理請求
    response := s.handleMessage(claims.Username, &msg)
    // 返回響應
@@ -238,7 +238,7 @@ func(s *MCPServer) createErrorResponse(id *string, code int, message string)(MCP
 }
 
 // 處理初始化
-func(s *MCPServer) handleInitialize(msg *MCPMessage) MCPMessage {
+func(s *MCPServer) handleInitialize(msg *MCPMessage)(MCPMessage) {
    return MCPMessage{
       JSONRPC: "2.0",
       ID:      msg.ID,
@@ -318,7 +318,7 @@ func(s *MCPServer) handleToolsCall(msg *MCPMessage)(MCPMessage) {
 }
 
 // 處理 MCP 消息
-func(s *MCPServer) handleMessage(username string, msg *MCPMessage) (MCPMessage) {
+func(s *MCPServer) handleMessage(username string, msg *MCPMessage)(MCPMessage) {
    switch msg.Method {
       case "initialize":
          return s.handleInitialize(msg)
@@ -326,6 +326,9 @@ func(s *MCPServer) handleMessage(username string, msg *MCPMessage) (MCPMessage) 
          return s.handleToolsList(msg)
       case "tools/call":
          return s.handleToolsCall(msg)
+      case "msg/call":
+         s.broadcastToAll(*msg)
+	 return *msg
       case "ping":
          return s.handlePing(msg)
       default: // 未知方法
@@ -341,7 +344,7 @@ func(s *MCPServer) handleMessage(username string, msg *MCPMessage) (MCPMessage) 
 }
 
 // 註冊工具
-func(app *MCPServer) RegisterTool(tool Tool) { 
+func(app *MCPServer) RegisterTool(tool Tool) {
    app.ToolKits[tool.Name] = tool
 }
 // alias
@@ -352,7 +355,9 @@ func(app *MCPServer) AddTool(tool Tool) {
 func(app *MCPServer) AddRouter(router *http.ServeMux) {
    // router.Handle("POST /auth", http.HandlerFunc(app.authHandler))
    router.Handle("GET /sse", http.HandlerFunc(app.sseHandler))
+   router.Handle("GET /capabilities/{toolName}", http.HandlerFunc(app.ToolsListFromWeb))
    router.Handle("POST /request", http.HandlerFunc(app.requestHandler))
+   router.Handle("POST /update/overwrite/{type}", http.HandlerFunc(app.OverWriteDataFromWeb))      // 更新檔案內容
 }
 
 func NewMCPServer()(*MCPServer) {
@@ -360,5 +365,6 @@ func NewMCPServer()(*MCPServer) {
       clients:  make(map[string]*SSEClient),
       requests: make(map[string]chan MCPMessage),
       ToolKits: make(map[string]Tool),
+      Tools: make(map[string]*MCPHost),
    }
 }
