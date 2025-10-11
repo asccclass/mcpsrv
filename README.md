@@ -138,7 +138,15 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 5. Open a Pull Request
 
 ## Contact
-
 Project maintainer: [asccclass](https://github.com/asccclass)
-
 ---
+## 參考構思
+
+```
+// 設定 agent 參考資訊
+agent.create_guideline(
+   condition=”Customer asks about refunds”,
+   action=”Check order status first to see if eligible”,
+   tools=[check_order_status],
+)
+```
