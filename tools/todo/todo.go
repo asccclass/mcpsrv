@@ -22,7 +22,7 @@ func(app *TodoMCPServer) AddTools(s *SryMCPServer.MCPServer) {
 - "action": "get_all_todos" | "get_todo_by_id" | "create_todo" | "update_todo" | "delete_todo" | "general_chat" (動作類型)
 - "parameters": {} (相關參數，如果有的話)
 
-如果是待辦事項相關：
+如果是與待辦事項相關：
 - 查看/列出待辦事項 -> action: "get_all_todos"
 - 查看特定待辦事項 -> action: "get_todo_by_id", parameters: {"id": "string"}
 - 新增/建立待辦事項 -> action: "create_todo", parameters: {"context": "內容", "user": "負責者", "isFinished": "0"}
