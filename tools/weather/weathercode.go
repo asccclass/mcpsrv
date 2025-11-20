@@ -25,22 +25,23 @@ type WeatherElement struct {
    Time        []Time   `json:"Time"`
 }
 
-// WeatherRecord holds a single weather record
+// WeatherEntry holds a single weather record
 // 天氣資料結構
-type WeatherRecord struct {
-   StartTime                 string  `json:"StartTime"`
-   EndTime                   string  `json:"EndTime"`
-   AvgTemp                   string `json:"AvgTemp (°C)"`
-   MaxTemp                   string `json:"MaxTemp (°C)"`
-   MinTemp                   string `json:"MinTemp (°C)"`
-   RelativeHumidity          string  `json:"RelativeHumidity"`
-   MaxApparentTemperature    string `json:"MaxApparentTemperature"`
-   MinApparentTemperature    string `json:"MinApparentTemperature"`
-   MaxComfortIndexDescription string  `json:"MaxComfortIndexDescription"`
-   ProbabilityOfPrecipitation string     `json:"ProbabilityOfPrecipitation"`
-   WeatherDesc               string  `json:"WeatherDesc"`
-   UVExposureLevel           string  `json:"UVExposureLevel"`
-   WeatherDescription        string  `json:"Weather Description"`
+type WeatherEntry struct {
+    StartTime                    string `json:"StartTime,omitempty"`
+    EndTime                      string `json:"EndTime,omitempty"`
+    AvgTemp                      string `json:"AvgTemp,omitempty"` // 注意：即使是空字串，也用 string
+    MaxTemp                      string `json:"MaxTemp,omitempty"`
+    MinTemp                      string `json:"MinTemp,omitempty"`
+    RelativeHumidity             string `json:"RelativeHumidity,omitempty"`
+    MaxApparentTemperature       string `json:"MaxApparentTemperature,omitempty"`
+    MinApparentTemperature       string `json:"MinApparentTemperature,omitempty"`
+    MaxComfortIndexDescription   string `json:"MaxComfortIndexDescription,omitempty"`
+    ProbabilityOfPrecipitation   string `json:"ProbabilityOfPrecipitation,omitempty"`
+    WeatherDesc                  string `json:"WeatherDesc,omitempty"`
+    UVExposureLevel              string `json:"UVExposureLevel,omitempty"`
+    // 這裡要注意 Key 之間有空格，在 Struct 欄位上要用駝峰式命名，並在 Tag 中完整保留
+    WeatherDescription           string `json:"Weather Description,omitempty"`
 }
 
 // DailyForecast represents the weather forecast for a day
@@ -58,7 +59,7 @@ type DailyForecast struct {
 // 天氣資料結構
 type WeatherData struct {
    City     string          `json:"city"`
-   Weathers []WeatherRecord `json:"weathers"`
+   Weathers []WeatherEntry `json:"weathers"`
 }
 
 // 判斷目前時間是否落在兩個時間字串中
@@ -81,7 +82,7 @@ func(app *WeatherMCPServer) IsNowBetween(startStr, endStr string) (bool, error) 
 }
 
 // 找到最接近時間的天候狀態
-func(app *WeatherMCPServer) judgeTime(data []WeatherRecord)(string) {
+func(app *WeatherMCPServer) judgeTime(data []WeatherEntry)(string) {
    result := ""
    for _, w := range data {
       if in, _ := app.IsNowBetween(w.StartTime, w.EndTime); in {
@@ -179,14 +180,27 @@ func(s *WeatherMCPServer) getWeather(args map[string]interface{}) (*mcp.CallTool
 
 // 查詢特定城市的天氣狀態
 func(app *WeatherMCPServer) getWeatherByCity(args map[string]interface{}) (*mcp.CallToolResult, error) {
-   city, ok := args["city"]
+   city, ok := args["city"].(string)
    if !ok {
       return nil, fmt.Errorf("Missing required parameter: city")
    }
-   desc := app.SearchStatus(city.(string))
-   if desc == "" {
-      desc = "無" + city.(string) + "的氣候資料"
+   url := fmt.Sprintf("%s/status/%s", app.API, city)
+   resp, err := app.makeAPIRequest("GET", url, nil)
+   if err != nil {
+      return mcp.NewToolResultError(fmt.Sprintf("Failed to get todos: %v", err)), nil
    }
-   fmt.Println("get weather by city:", desc)
+   var statuz WeatherEntry
+   if err := json.Unmarshal([]byte(resp), &statuz); err != nil {
+      return mcp.NewToolResultError(fmt.Sprintf("Failed to parse response: %v", err)), nil
+   }
+   desc := ""
+   if statuz.StartTime == "" {
+      desc = "無" + city + "的氣候資料"
+      return mcp.NewToolResultText(desc), nil
+   }
+   desc = fmt.Sprintf("%s目前為%s", city, statuz.WeatherDescription)
+   if statuz.UVExposureLevel != "" {
+      desc = desc + fmt.Sprintf("紫外線等級為%s", statuz.UVExposureLevel)
+   }
    return mcp.NewToolResultText(desc), nil
 }

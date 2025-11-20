@@ -103,7 +103,7 @@ func(app *WeatherMCPServer) AddTools(s *SryMCPServer.MCPServer) {
    })
    s.AddTool(SryMCPServer.Tool{
       Name:        "get_weather_by_city",
-      Description: "得特定城市的天氣",
+      Description: "取得特定城市的天氣",
       InputSchema: SryMCPServer.InputSchema{
          Type: "object",
          Properties: map[string]SryMCPServer.PropertySchema {
